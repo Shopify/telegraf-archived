@@ -2,6 +2,7 @@ package http_listener_v2
 
 import (
 	"compress/gzip"
+	"compress/zlib"
 	"crypto/subtle"
 	"crypto/tls"
 	"io/ioutil"
@@ -259,7 +260,6 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
 	encoding := req.Header.Get("Content-Encoding")
-
 	switch encoding {
 	case "gzip":
 		r, err := gzip.NewReader(req.Body)
@@ -299,6 +299,26 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 			}
 			return nil, false
 		}
+		return bytes, true
+	case "deflate":
+		r, err := zlib.NewReader(req.Body)
+		if err != nil {
+			h.Log.Debug(err.Error())
+			if err := badRequest(res); err != nil {
+				h.Log.Debugf("error in bad-request: %v", err)
+			}
+			return nil, false
+		}
+		defer r.Close()
+		maxReader := http.MaxBytesReader(res, r, int64(h.MaxBodySize))
+		bytes, err := ioutil.ReadAll(maxReader)
+		if err != nil {
+			if err := tooLarge(res); err != nil {
+				h.Log.Debugf("error in too-large: %v", err)
+			}
+			return nil, false
+		}
+		// h.Log.Debugf("%s", bytes)
 		return bytes, true
 	default:
 		defer req.Body.Close()

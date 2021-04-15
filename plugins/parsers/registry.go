@@ -6,6 +6,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/datadog"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
@@ -253,6 +254,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml":
 		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
+	case "datadog":
+		parser, err = datadog.New()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
